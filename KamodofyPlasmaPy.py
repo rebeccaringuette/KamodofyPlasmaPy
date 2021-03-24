@@ -20,7 +20,6 @@ kamodo = KPP.ListPlasmaPy([list of function names], verbose=1)   #to see more ou
 #PlasmaPy wrapper code, written assuming annotations are included for each function
 
 import itertools, importlib
-import numpy as np
 from functools import partial, update_wrapper
 from inspect import signature
 from astropy import units as u
@@ -49,31 +48,15 @@ bad_function_list = ['swept_probe_analysis','Characteristic',
                      'impact_parameter','cold_plasma_permittivity_SDP',
                      'cold_plasma_permittivity_LRP']
 
-def _ConvertToAstropy(variable):
-    '''Convert given kamodofied function to an astropy quantity in SI units'''
-    
-    if callable(variable):    
-        try:
-            return variable.data*u.Unit(variable.meta['units']).si
-        except:  #return if a function, but not a kamodo function
-            return variable
-    else: 
-        return variable   
-
 def _Astropy(func):
-    '''Apply ConvertToAstropy wrapper to each argument/keyword'''
+    '''Retrieve value from AstroPy quantity in the function output'''
     
-    #returns an empty arg list if no units for any of the arguments or return?!
+    #handle conversion to SI units per variable
     def astropy_wrapper(*args, **kwargs):
-        new_args, new_kwargs = [], {}
-        for arg in args: 
-            new_args.append(_ConvertToAstropy(arg))
-        for key, value in kwargs.items(): 
-            new_kwargs[key] = _ConvertToAstropy(value)
         try: 
-            return func(*new_args, **new_kwargs).value
+            return func(*args, **kwargs).value
         except: 
-            return func(*new_args, **new_kwargs)  #not all returns types are astropy quantities
+            return func(*args, **kwargs)  #not all returns types are astropy quantities
     
     return update_wrapper(astropy_wrapper, func)
 
@@ -157,22 +140,14 @@ def _ArgDict(func, inf_gen):
     return arg_dict
 
 def _KamodofyPlasmaPy(func, inf_gen, to_hz=False):
-    '''Simplify kamodofication process of a PlasmaPy function for user.'''
+    '''Simplify kamodofication process of a PlasmaPy function.'''
     
     #some functions are being kamodofied more than once here. Fixing.
     K_test = False  #initialize kamodofication status variable
-    
-    #only convert to astropy if quantities indicated in doc string
-    if len(func.__doc__.split('astropy'))==1:  #does not mention astropy quantities
-        K_test = True
-        return kamodofy(func, units=_PPunits(func), arg_units=_ArgDict(func, inf_gen),
-                        citation=PP_citation)
-    
+     
     #check for to_hz in function signature, return properly kamodofied function
     if ('to_hz' not in signature(func).parameters) and (not K_test):
         K_test = True
-        #print('Kamodofying with no to_hz arg.')
-        #error occurs here, but only if arg_dict returns none. Why?
         return kamodofy(_Astropy(func), units=_PPunits(func), 
                         arg_units=_ArgDict(func, inf_gen), citation=PP_citation)    
     elif not K_test: 
@@ -189,7 +164,7 @@ def _KamodofyPlasmaPy(func, inf_gen, to_hz=False):
                                    arg_units=_ArgDict(func, inf_gen),
                                    hidden_args=['to_hz'], citation=PP_citation)
     if not K_test: 
-        print("Function not kamodofied. Check logic of module.")
+        print(func, "not kamodofied. Check logic of module.")
         return K_test
 
 def _KamodoFuncName(func, inf_gen, kamodo):
@@ -239,7 +214,7 @@ def _SinglePlasmaPy(func, inf_gen, kamodo, verbose=0):
             return kamodo
     else:
         if verbose > 0: print('-Two versions of',return_name,'will be generated: one in radian/s and one in Hz.')
-        kamodo[return_name+'1'] = _KamodofyPlasmaPy(func, inf_gen)
+        kamodo[return_name+'1'] = _KamodofyPlasmaPy(func, inf_gen, to_hz=False)
         kamodo[return_name+'2'] = _KamodofyPlasmaPy(func, inf_gen, to_hz=True)
     
     return kamodo
