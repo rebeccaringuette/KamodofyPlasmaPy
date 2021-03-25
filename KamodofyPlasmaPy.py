@@ -23,7 +23,7 @@ import itertools, importlib
 from functools import partial, update_wrapper
 from inspect import signature
 from astropy import units as u
-from KamodoMaster.kamodo.kamodo import kamodofy, Kamodo
+from kamodo import kamodofy, Kamodo
 from sympy.abc import _clash
 
 
