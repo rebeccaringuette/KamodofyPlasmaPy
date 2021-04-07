@@ -93,14 +93,11 @@ def _KamodoUnit(old_unit, func_name=''):
             old_unit = str(old_unit)
     if (old_unit=='[Unit("1 / m3"), Unit("kg / m3")]'): 
         if func_name=='mass_density': return '1/m**3'  #allow n_density here for conversion
-        else: return 'kg/m**3'  #enforce mass_density input only
+        else: return 'kg/m**3'  #enforce mass_density input only elsewhere
     for bad in ['class', 'typing', 'Union']: 
         if bad in old_unit: return 'm/m'   #replace bad unit descriptors with dimensionless
-    for item in ['S','N','Ohm']:  #force sympy to accept by decomposing the unit
-        if item in old_unit: old_unit = u.Unit(old_unit).decompose().to_string('ogip')
     unit_list = [(' / ','/'),(' * ','*'),(' ','*')]  #cannot accept ^ as an operator
     for old, new in unit_list: old_unit = old_unit.replace(old,new)
-    if 'radian' not in old_unit: old_unit = old_unit.replace('rad','radian')
     if old_unit=='': old_unit='m/m'  #kamodo represents 'm/m' better than ''
     
     return old_unit
